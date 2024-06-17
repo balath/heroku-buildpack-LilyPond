@@ -7,7 +7,7 @@ Use LilyPond-Buildpack if you need Heroku to execute the LilyPond application.
 NOTE: There must be a .ly file in the root directory of the app to trigger the LilyPond installation.
 
 <br>$> heroku create myapp_name -s cedar
-<br>$> heroku config:add BUILDPACK_URL=https://github.com/rzil/heroku-buildpack-LilyPond.git
+<br>$> heroku config:add BUILDPACK_URL=https://github.com/balath/heroku-buildpack-LilyPond.git
 
 # create your app, see test-app for an example
 
