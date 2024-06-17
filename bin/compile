@@ -1,46 +1,20 @@
-#!/usr/bin/env bash
-# bin/compile <build-dir> <cache-dir>
-set -e
+# bin/compile
+#!/bin/bash
 
 BUILD_DIR=$1
-CACHE_DIR=$2
-LP_DIR=`cd $(dirname $0); cd ..; pwd`
 
-mkdir -p $CACHE_DIR
-cd $CACHE_DIR
-file1="lilypond-2.18.2-1.linux-64.sh"
-if [ -f $file1 ]
-then
-    echo "-----> Download found"
+echo "-----> Downloading LilyPond"
+curl -L -o lilypond.sh http://lilypond.org/download/binaries/linux-64/lilypond-2.18.2-1.linux-64.sh
+
+echo "-----> Installing LilyPond"
+sh lilypond.sh --prefix=$BUILD_DIR --batch
+
+# Asegúrate de que el binario se encuentra en el directorio correcto
+if [ -d "$BUILD_DIR/bin" ]; then
+  echo 'export PATH="$PATH:$BUILD_DIR/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
 else
-	echo "-----> Downloading LilyPond"
-	curl http://download.linuxaudio.org/lilypond/binaries/linux-64/lilypond-2.18.2-1.linux-64.sh > $file1
-	if [ -f $file1 ]
-	then
-		echo "-----> Download complete"
-	else
-	    echo "-----> Download failed. LilyPond installation cannot continue."
-	    exit 1;
-	fi
+  echo 'export PATH="$PATH:$BUILD_DIR/lilypond-2.18.2/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
 fi
 
-if hash lilypond 2>/dev/null; then
-	echo "-----> LilyPond already installed"
-else
-	echo "-----> Installing LilyPond"
-	sh lilypond-2.18.2-1.linux-64.sh --prefix=/app/ --batch
-fi
-echo 'export PATH="$PATH:$BUILD_DIR/lilypond/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
 echo "-----> Testing LilyPond"
-echo \\header{title = \"A scale in LilyPond\"} \\relative {c d e f g a b c} \\version \"2.18.2\" > blah.ly
-lilypond -fpdf blah.ly
-if [ -f $file1 ]
-then
-	echo "-----> Test passed"
-	rm blah.ly blah.pdf
-else
-	echo "-----> Test failed"
-	exit 1;
-fi
-
-echo "-----> Done installing LilyPond"
+$BUILD_DIR/lilypond-2.18.2/bin/lilypond --version
