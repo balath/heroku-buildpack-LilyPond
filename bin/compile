@@ -1,20 +1,52 @@
 #!/bin/bash
-# bin/compile
 
+# Argumentos de entrada del script
 BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
 
+# Función para exportar variables de entorno desde ENV_DIR
+export_env_dir() {
+  env_dir=$1
+  acceptlist_regex=${2:-''}
+  denylist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$acceptlist_regex" | grep -qvE "$denylist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
+# Exportar variables de entorno desde ENV_DIR
+export_env_dir "$ENV_DIR"
+
+# Descarga y preparación de LilyPond
 echo "-----> Downloading LilyPond"
-curl -L -o lilypond.sh http://lilypond.org/download/binaries/linux-64/lilypond-2.18.2-1.linux-64.sh
+curl -L -o /tmp/lilypond.sh http://lilypond.org/download/binaries/linux-64/lilypond-2.18.2-1.linux-64.sh
 
 echo "-----> Installing LilyPond"
-sh lilypond.sh --prefix=$BUILD_DIR --batch
+mkdir -p $BUILD_DIR/.heroku/lilypond
+sh /tmp/lilypond.sh --prefix=$BUILD_DIR/.heroku/lilypond --batch
 
-# Asegúrate de que el binario se encuentra en el directorio correcto
-if [ -d "$BUILD_DIR/bin" ]; then
-  echo 'export PATH="$PATH:$BUILD_DIR/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
-else
-  echo 'export PATH="$PATH:$BUILD_DIR/lilypond-2.18.2/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
+# Verificar si la instalación se realizó correctamente
+if [ ! -f "$BUILD_DIR/.heroku/lilypond/bin/lilypond" ]; then
+  echo "Error: LilyPond installation failed or the path is incorrect."
+  exit 1
 fi
 
+# Añadir binario de LilyPond al PATH
+echo 'export PATH="$PATH:$BUILD_DIR/.heroku/lilypond/bin"' >> $BUILD_DIR/.profile.d/lilypond.sh
+
+# Probar la instalación de LilyPond
 echo "-----> Testing LilyPond"
-$BUILD_DIR/lilypond-2.18.2/bin/lilypond --version
+$BUILD_DIR/.heroku/lilypond/bin/lilypond --version
+
+# Verificar la salida de la instalación
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to execute LilyPond."
+  exit 1
+fi
+
+echo "LilyPond installed successfully."
